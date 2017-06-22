@@ -1,3 +1,6 @@
+	// allocate enough memory to store a pixel
+	RGBTRIPLE* pixel = malloc(sizeof(RGBTRIPLE));	
+
 	// repeat for every scanline of infile
 	for(int j = 0; j < abs(biHeight); j++)
 	{
@@ -27,5 +30,51 @@
 			if(k < n-1)
 				fseek(inptr, - ((long int) (biWidth * sizeof(RGBTRIPLE))), SEEK_CUR);	
 		}	
+		// skip reading the padding of infile
 		fseek(inptr, inPadd, SEEK_CUR);	
 	}
+
+
+
+bmp.h:
+
+
+#include <stdint.h>
+typedef uint8_t  BYTE;
+typedef uint32_t DWORD;
+typedef int32_t  LONG;
+typedef uint16_t WORD;
+
+typedef struct 
+{ 
+    WORD bfType; 
+    DWORD bfSize; 
+    WORD bfReserved1; 
+    WORD bfReserved2; 
+    DWORD bfOffBits; 
+} __attribute__((__packed__)) 
+BITMAPFILEHEADER; 
+
+typedef struct
+{
+    DWORD biSize; 
+    LONG biWidth; 
+    LONG biHeight; 
+    WORD biPlanes; 
+    WORD biBitCount; 
+    DWORD biCompression; 
+    DWORD biSizeImage; 
+    LONG biXPelsPerMeter; 
+    LONG biYPelsPerMeter; 
+    DWORD biClrUsed; 
+    DWORD biClrImportant; 
+} __attribute__((__packed__))
+BITMAPINFOHEADER; 
+
+typedef struct
+{
+    BYTE rgbtBlue;
+    BYTE rgbtGreen;
+    BYTE rgbtRed;
+} __attribute__((__packed__))
+RGBTRIPLE;
