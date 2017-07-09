@@ -9,6 +9,9 @@
 #include "bmp.h"
 
 int divisor(int ,int );
+void store_scanLine(FILE* , RGBTRIPLE* , int , int );
+void write_scanLine(FILE* , RGBTRIPLE* , int , int , int , int , int );
+
 
 int main(int argc, char** argv)
 {
@@ -19,13 +22,14 @@ int main(int argc, char** argv)
 		return 1;
  	}
 
-	//remember the factor
+	// remember the factor
 	float f;
 	sscanf(argv[1], "%f ", &f);
 	
-	// n holds the number of times every pixel and scanline has to repeat 	
+	// repeat every pixel and scanline n times
 	int n = f;
 	
+	// every 'nume' out of 'denom' pixels and scanlines are repeated n+1 times
 	int nume = lroundf( ( f - (float)n ) * 100 );
 	int denom = 0;
 	
@@ -36,8 +40,6 @@ int main(int argc, char** argv)
 		denom = 100 / div; 
 	}
 	
-
-
  	// remember filenames
  	char* infile = argv[2];
  	char* outfile = argv[3];		
@@ -86,13 +88,13 @@ int main(int argc, char** argv)
 	int inPadd  = (4 - (biWidth * sizeof(RGBTRIPLE)) % 4) % 4;			
 	int outPadd = (4 - (outBI.biWidth * sizeof(RGBTRIPLE)) % 4) % 4;
 
-	// allocate enough memory to store a pixel
-	RGBTRIPLE* pixel = malloc(sizeof(RGBTRIPLE));		
+	// allocate memory to store every pixel of inLine n times
+	RGBTRIPLE* scanLine = malloc(sizeof(RGBTRIPLE) * biWidth);		
 
 	// if memory cannot be allocated in heap
-	if(!pixel)
+	if(!scanLine)
 	{
-		free(pixel);
+		free(scanLine);
 		fclose(outptr);
 		fclose(inptr);
 		fprintf(stderr, "Could not allocate memory in heap.\n");
@@ -106,75 +108,31 @@ int main(int argc, char** argv)
  	// write outfile's BITMAPFILEHEADER and BITMAPINFOHEADER
 	fwrite(&outBF, sizeof(BITMAPFILEHEADER), 1, outptr);
 	fwrite(&outBI, sizeof(BITMAPINFOHEADER), 1, outptr);
-
-
-	int count_scan = 0,temp_scan_counter = 0, x, count_pix, temp_pix_counter;
+	
+	int counter = 0, ex = 0;
 	
 	// repeat for every scanline of infile
 	for(int j = 0; j < abs(biHeight); j++)
 	{
-		
-		count_scan++;
-		x = n;
-		
-		if(count_scan <= nume && (temp_scan_counter + 1 + n * abs(biHeight)) <= abs(outBI.biHeight))
-			{
-				x++;
-				temp_scan_counter++;
-			}
-		else 	if(count_scan == denom)
-					count_scan = 0;
-		
-		if (x == 0)
-			fseek(inptr, biWidth * sizeof(RGBTRIPLE), SEEK_CUR);
-		
-		// write every scanline x times
-		for(int k = 0; k < x; k++)
-		{	
-			
-			count_pix = 0;
-			temp_pix_counter = 0;
-			// read scanline pixel-by-pixel			
-			for(int i = 0; i < biWidth; i++)
-			{
-				
-				count_pix++;
-				
-				fread(pixel, sizeof(RGBTRIPLE), 1, inptr);			
+		counter++;
 
-				// write every pixel n times
-				for(int l = 0; l < n; l++)
-				{
-					fwrite(pixel, sizeof(RGBTRIPLE), 1, outptr);
-					temp_pix_counter++;
-				}
-				
-				if(count_pix <= nume && temp_pix_counter < outBI.biWidth)
-					{
-						fwrite(pixel, sizeof(RGBTRIPLE), 1, outptr);
-						temp_pix_counter++;
-					}
-				
-				else 	if(count_pix == denom)
-								count_pix = 0;
-				
-			}
-			
-			// introduce padding after scanline in outfile
-			for(int l = 0; l < outPadd; l++)
-				fputc(0x00, outptr);
- 
-			// return the cursor to starting of infile's scanline
-			if(k < x - 1)
-				fseek(inptr, - ((long int) (biWidth * sizeof(RGBTRIPLE))), SEEK_CUR);
-							
+		store_scanLine(inptr, scanLine, biWidth, inPadd);
+		
+		for(int i = 0; i < n; i++)
+			write_scanLine(outptr, scanLine, n, biWidth, nume, denom, outPadd);		
+
+		if(counter <= nume && ( ex + 1 + n * abs(biHeight)) <= abs(outBI.biHeight))
+		{	
+			write_scanLine(outptr, scanLine, n, biWidth, nume, denom, outPadd);		
+			ex++;
 		}
 			
-		fseek(inptr, inPadd, SEEK_CUR);	
+		else 	if(counter == denom)
+						counter = 0;		
+		
 	}
-
 	// free the allocated memory
-	free(pixel);
+	free(scanLine);
     
 	// close infile and outfile
 	fclose(inptr);
@@ -183,6 +141,7 @@ int main(int argc, char** argv)
 	// success
 	return 0;
 }
+
 
 //source: https://www.programiz.com/c-programming/examples/hcf-gcd
 int divisor(int n1, int n2)
@@ -199,3 +158,38 @@ int divisor(int n1, int n2)
 	return(n1);
 }
 
+// store the inLine in array scanLine
+void store_scanLine(FILE* inptr, RGBTRIPLE* scanLine, int biWidth, int inPadd)
+{
+	for(int i = 0; i < biWidth; i++)
+		fread(&scanLine[i], sizeof(RGBTRIPLE), 1, inptr);
+
+	fseek(inptr, inPadd, SEEK_CUR);
+}
+
+
+void write_scanLine(FILE* outptr, RGBTRIPLE* scanLine, int n, int biWidth, int nume, int denom, int outPadd)
+{
+	int counter = 0;
+	
+	for(int i = 0; i < biWidth; i++)
+	{
+		for(int j = 0; j < n; j++)
+		{
+			
+			fwrite(&scanLine[i], sizeof(RGBTRIPLE), 1, outptr);
+		}
+		counter++;
+		
+		if(counter <= nume && (i+1) < biWidth)
+			fwrite(&scanLine[i], sizeof(RGBTRIPLE), 1, outptr);
+			
+		else 	if(counter == denom)
+						counter = 0;
+		
+	}
+	
+	// introduce padding after scanline in outfile
+	for(int l = 0; l < outPadd; l++)
+		fputc(0x00, outptr);
+}
