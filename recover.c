@@ -36,6 +36,7 @@ BYTE* buffer = malloc( 512 * sizeof(BYTE) );
 				
 			if(check == 1)
 			{	
+                                
 				for(int j = k; j < 512; j++)
 					fwrite(&buffer[j], sizeof(BYTE), 1, image);
 				break;
