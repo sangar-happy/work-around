@@ -36,7 +36,8 @@ BYTE* buffer = malloc( 512 * sizeof(BYTE) );
 				
 			if(check == 1)
 			{	
-                                // this ensu
+                                // ensures that the image starts from ffd8ff
+/*This is not working for the first image*/				
 				for(int j = k; j < 512; j++)
 					fwrite(&buffer[j], sizeof(BYTE), 1, image);
 				break;
